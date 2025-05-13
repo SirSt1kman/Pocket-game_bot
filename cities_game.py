@@ -1,4 +1,4 @@
-from test_data import cities_list
+from cities_data import cities_list
 
 
 def cities_loop(city: str, last_char: str, f: bool) -> str:
