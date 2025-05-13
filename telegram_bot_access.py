@@ -14,6 +14,10 @@ def last_char_search(word: str) -> str:
     return word[-1]
 
 
+# markup_admin = types.ReplyKeyboardMarkup(row_width=1)
+# markup_admin.add(types.InlineKeyboardButton("Изменить список играющих"))
+# markup_admin.add(types.InlineKeyboardButton("Изменить таблицу лидеров"))
+
 @bot.message_handler(content_types=['text'])
 def start(message):
     """Приветствие пользователя"""
@@ -61,34 +65,41 @@ def choose_game(message):
         bot.send_message(message.from_user.id, "Если судоку, то напиши судоку, если города - города.")
 
 
-@bot.message_handler(content_types=['text'])
+def cities_start() -> None:
+    """Начало игры в города"""
+    global bot_says, flag_0
+    bot_says = ''
+    flag_0 = True
+
+
 def cities_game(message):
     """Функция, основное тело игры"""
     global bot_says, flag_0, cities_branch
 
+    cities_start()
     # то, что мы написали
     text = message.text.lower()
-    if text != 'города':
+
+    # играть ещё раз
+    if text == 'play':
+        cities_start()
+        bot.send_message(message.from_user.id, "Играем сначала!")
+        new_game()
+
+    # выход из игры в города
+    elif text == 'exit':
+        cities_branch = False
+        bot.send_message(message.from_user.id, "Заглядывай поиграть со мной позже, буду ждать."
+                                               "Напиши /start для перезапуска.")
+        choose_game(message)
+
+    elif text != 'города':
         # переменная, хранящая значение функции о проверке города в начале игры
         if bot_says == '':
-            verdict = cities_loop(text, '1', bool(flag_0))
+            verdict = cities_loop(text, '1', flag_0)
         else:
             last_char = last_char_search(bot_says)
-            verdict = cities_loop(text, last_char, bool(flag_0))
-
-        # Было принято решение вернуться назад в меню
-        if verdict == 'exit':
-            cities_branch = False
-            bot.send_message(message.from_user.id, "Заглядывай поиграть со мной позже, буду ждать.")
-            start(message)
-
-        # играть ещё раз
-        if verdict == 'play':
-            bot.send_message(message.from_user.id, "Играем снова, начинай!")
-            bot_says = ''
-            flag_0 = 1
-            new_game()
-            start(message)
+            verdict = cities_loop(text, last_char, flag_0)
 
         # Игра уже окончена
         if verdict == 'game over':
@@ -96,34 +107,34 @@ def cities_game(message):
                                                    "Ты можешь начать игру ещё раз, если хочешь. Для этого пиши play.")
 
         # Был введён не город, а другое слово
-        if verdict == 'not city':
+        elif verdict == 'not city':
             bot.send_message(message.from_user.id, "Извини, но мы играем в города, а не просто слова. "
                                                    "Попробуй назвать город.")
 
         # Был назван город, который уже упоминался в игре
-        if verdict == 'repeat':
+        elif verdict == 'repeat':
             bot.send_message(message.from_user.id, "Прости, в городах нельзя повторяться, нельзя. "
                                                    "Вспомни другой город.")
 
         # Был назван город, но не на нужную букву
-        if verdict == 'wrong input':
+        elif verdict == 'wrong input':
             bot.send_message(message.from_user.id, "Нет, тебе следует называть город на ту букву, "
                                                     "на которую оканчивается мой.")
 
         # Окончание игры в случае победы над ботом путем исключения всех слов из списка городов на одну букву
-        if verdict == 'won by bot':
-            flag_0 -= 1
+        elif verdict == 'won by bot':
+            flag_0 = False
             bot.send_message(message.from_user.id, "Ха-Ха, я тебя одолел! Бросишь мне вызов ещё раз?"
                                                    "Пиши play.")
 
         # Окончание игры в результате полной победы над ботом путем исключения всех городов из списка
-        if verdict == 'totally won':
-            flag_0 -= 1
+        elif verdict == 'totally won':
+            flag_0 = False
             bot.send_message(message.from_user.id, "Это грандиозная победа! Тебе никогда меня не превзойти!"
                                                    "Хочешь ещё раз проиграть мне? Тогда напиши play")
 
         # Блок функции, выполняющийся при корректном вводе города
-        if verdict == 'ok':
+        elif verdict == 'ok':
             # последняя буква города, на которую есть какие-либо города в России (не ё, ы, ъ, ь)
             last_char = last_char_search(text)
             # город, выбранный ботом
@@ -131,7 +142,7 @@ def cities_game(message):
 
             # проверка на проигрыш
             if new_city == 'bot lose':
-                flag_0 -= 1
+                flag_0 = False
                 bot.send_message(message.from_user.id, "Поздравляю, ты одолел меня! Я не смог вспомнить ни одного "
                                                        "подходящего слова. Если хочешь сыграть ещё раз, напиши play")
             else:
@@ -140,7 +151,7 @@ def cities_game(message):
 
 
 bot_says = ''
-flag_0 = 1
+flag_0 = True
 cities_branch = False
 sudoku_branch = False
 # Запускаем работу бота
