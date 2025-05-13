@@ -1,21 +1,13 @@
-from cities_data import cities_list
+from test_data import cities_list
 
 
 def cities_loop(city: str, last_char: str, f: bool) -> str:
     """Функция, которая проверяет введённое слово на корректность и выходит из игры по её окончании"""
 
-    # сыграть ещё раз
-    if city == 'play':
-        return 'play'
-
-    # Выход из игры, если пользователь пишет кодовое слово
-    if city == 'выход':
-        return 'exit'
-
     # Проверка на то, закончилась ли игра
     if not f:
         return 'game over'
-        
+
     # Предупреждение о том, что введен не город, а другое слово
     if city not in cities_list:
         return 'not city'
