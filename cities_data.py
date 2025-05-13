@@ -7,4 +7,4 @@ table = pd.read_html(URL)[0]
 # получаем колонку таблицы с названиями городов
 cities_column = table['Город']
 # создаём обычный список из найденных городов
-cities_list = [city for city in cities_column]
+cities_list = [city.lower() for city in cities_column]
