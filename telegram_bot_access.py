@@ -1,5 +1,7 @@
 import telebot
 from cities_game import cities_loop, choose_random_city, new_game
+from sudoku_generator import sudoku_unsolved, sudoku_solved
+from sudoku_game import sudoku_loop, new_game_sudoku
 
 # создаём бота по токену
 bot = telebot.TeleBot('8187783775:AAFv7bQa8CK5FkX3PP-0b5plYmxFlYCEV6g')
@@ -12,6 +14,26 @@ def last_char_search(word: str) -> str:
     while word[-1] in 'ёыьъ':
         word = word[:-1]
     return word[-1]
+
+
+def formatted_print(message, arr: list) -> None:
+    """Функция, выводящая в чат-бот сетку судоку"""
+    print_line = []
+    for line in arr:
+        for element in line:
+            if element == 0:
+                print_line.append('  ')
+            else:
+                print_line.append(str(element))
+    bot.send_message(message.from_user.id, '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n-------------------------\n'
+                                           '{} | {} | {} | {} | {} | {} | {} | {} | {} \n'.format(*print_line))
 
 
 @bot.message_handler(content_types=['text'])
@@ -28,7 +50,7 @@ def start(message):
     if cities_branch:
         cities_game(message)
     elif sudoku_branch:
-        pass
+        sudoku_game(message)
 
 
 def choose_game(message):
@@ -43,6 +65,8 @@ def choose_game(message):
     if message.text.lower() == 'города':
         cities_branch = True
         sudoku_branch = False
+        cities_start()
+        new_game()
         bot.send_message(message.from_user.id, "Играем в города, поехали!")
         bot.send_message(message.from_user.id, "Правила игры:\n"
                                                "* Каждый город должен входить в число городов России\n"
@@ -58,6 +82,7 @@ def choose_game(message):
     if message.text.lower() == 'судоку':
         sudoku_branch = True
         cities_branch = False
+        new_game_sudoku()
         bot.send_message(message.from_user.id, "Играем в судоку, погнали!")
         bot.send_message(message.from_user.id, "Правила игры:\n"
                                                "* Каждый столбец судоку должен содержать по одной цифре от 1 до 9\n"
@@ -65,8 +90,13 @@ def choose_game(message):
                                                "* Каждый блок судоку 3 на 3 должен содержать по одной цифре от 1 до 9\n"
                                                "* Поражение засчитывается в случае, если игрок допустил 3 ошибки\n"
                                                "* Игрок побеждает, если всё поле судоку заполнено правильно\n"
+                                               "* Чтобы поставить цифру в клетку, укажите через пробел её координаты "
+                                               "по х и у (слева направо и сверху вниз от 1 до 9), а потом через пробел"
+                                               "цифру, которую вы хотите поставить в соответствующую клетку\n"
+                                               "* У вас есть три права на ошибку, после этого вы проигрываете\n"
                                                "* Чтобы вернуться к выбору игр напишите выход\n"
                                                "* Чтобы снова сыграть в города напишите play")
+        formatted_print(message, sudoku_unsolved)
 
     # начальная ветка, перезапуск бота
     if message.text == '/start':
@@ -82,7 +112,7 @@ def cities_start() -> None:
 
 
 def cities_game(message):
-    """Функция, основное тело игры"""
+    """Функция, основное тело игры в города"""
     global last_char, flag_0, cities_branch
 
     # то, что мы написали
@@ -154,8 +184,77 @@ def cities_game(message):
                 bot.send_message(message.from_user.id, new_city.capitalize())
 
 
+def sudoku_game(message):
+    """Функция, основное тело игры в судоку"""
+    global sudoku_branch, mistakes, f0, sudoku_solved, sudoku_unsolved
+
+    # то, что мы написали
+    text = message.text.lower()
+
+    # играть ещё раз
+    if text == 'play':
+        mistakes = 0
+        f0 = True
+        sudoku_unsolved, sudoku_solved = new_game_sudoku()
+        formatted_print(message, sudoku_unsolved)
+        bot.send_message(message.from_user.id, "Играем сначала!")
+
+
+    # выход из игры в города
+    elif text == 'exit':
+        sudoku_branch = False
+        bot.send_message(message.from_user.id, "Заглядывай поиграть со мной позже, буду ждать.\n"
+                                               "Напиши /start для перезапуска.")
+        choose_game(message)
+
+    elif text != 'судоку':
+        # переменная, хранящая значение функции о проверке города в начале хода
+        try:
+            pos_x, pos_y, num = list(map(int, text.split()))
+            verdict = sudoku_loop(pos_x, pos_y, num, mistakes, f0)
+
+            if verdict == 'already played':
+                bot.send_message(message.from_user.id, "Ты уже сыграл, разве нет?\n"
+                                                       "Напиши play, чтобы сыграть ещё раз.")
+
+            elif verdict == 'lose':
+                bot.send_message(message.from_user.id, "Вы ошиблись трижды, хотите начать сначала?\n"
+                                                       "Напишите play, чтобы перезапустить раскладку.")
+                f0 = False
+
+            elif verdict == 'wrong position':
+                bot.send_message(message.from_user.id, "Вы неправильно указали координаты клетки.\n"
+                                                       "Попробуйте ещё раз. Помните, что они от 1 до 9")
+
+            elif verdict == 'wrong number':
+                bot.send_message(message.from_user.id, "Вы неправильно указали значение клетки.\n"
+                                                       "Попробуйте ещё раз.")
+
+            elif verdict == 'already num':
+                bot.send_message(message.from_user.id, "На этой позиции уже стоит цифра.\n"
+                                                       "Выберите другую клетку.")
+
+            elif verdict == 'mistake':
+                mistakes += 1
+                bot.send_message(message.from_user.id, "Будьте внимательней, вы ошиблись")
+
+            elif verdict == 'ok':
+                sudoku_unsolved[pos_y - 1][pos_x - 1] = num
+                formatted_print(message, sudoku_unsolved)
+
+            if sudoku_unsolved == sudoku_solved and f0:
+                f0 = False
+                bot.send_message(message.from_user.id, "Поздравляю, вы прошли уровень")
+        except ValueError:
+            bot.send_message(message.from_user.id, 'Вы должны вводить данные по правилам!')
+
+    print(sudoku_solved)
+
+
 last_char = '1'
 flag_0 = True
+mistakes = 0
+f0 = True
 cities_branch = False
 sudoku_branch = False
 
