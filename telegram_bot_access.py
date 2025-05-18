@@ -14,10 +14,6 @@ def last_char_search(word: str) -> str:
     return word[-1]
 
 
-# markup_admin = types.ReplyKeyboardMarkup(row_width=1)
-# markup_admin.add(types.InlineKeyboardButton("Изменить список играющих"))
-# markup_admin.add(types.InlineKeyboardButton("Изменить таблицу лидеров"))
-
 @bot.message_handler(content_types=['text'])
 def start(message):
     """Приветствие пользователя"""
@@ -39,19 +35,23 @@ def choose_game(message):
     """Выбор игры в боте"""
     global cities_branch, sudoku_branch
 
+    #Предупреждение о неправильно введённом кодовом слове
+    if message.text.lower() not in ['/start', 'судоку', 'города', 'exit']:
+        bot.send_message(message.from_user.id, "Простите, я не знаю такой команды")
+
     # города
     if message.text.lower() == 'города':
         cities_branch = True
         sudoku_branch = False
         bot.send_message(message.from_user.id, "Играем в города, поехали!")
-        bot.send_message(message.from_user.id, "Правила игры:"
-                                               "* Каждый город должен входить в число городов России"
-                                               "* Нельзя дважды повторять один и тот же город"
-                                               "* Называть город можно только на последнюю букву предыдущего города"
-                                               "* Последней буквой считаются все, кроме ё, ъ, ы, ь"
-                                               "* Регистр учитывается, пишите с маленькой буквы"
-                                               "* Побеждает тот, кто последним назовёт город из списка"
-                                               "* Чтобы вернуться к выбору игр напишите выход"
+        bot.send_message(message.from_user.id, "Правила игры:\n"
+                                               "* Каждый город должен входить в число городов России\n"
+                                               "* Нельзя дважды повторять один и тот же город\n"
+                                               "* Называть город можно только на последнюю букву предыдущего города\n"
+                                               "* Последней буквой считаются все, кроме ё, ъ, ы, ь\n"
+                                               "* Регистр не учитывается, пишите с любой буквы\n"
+                                               "* Побеждает тот, кто последним назовёт город из списка\n"
+                                               "* Чтобы вернуться к выбору игр напишите выход\n"
                                                "* Чтобы снова сыграть в города напишите play")
 
     # судоку
@@ -59,7 +59,16 @@ def choose_game(message):
         sudoku_branch = True
         cities_branch = False
         bot.send_message(message.from_user.id, "Играем в судоку, погнали!")
+        bot.send_message(message.from_user.id, "Правила игры:\n"
+                                               "* Каждый столбец судоку должен содержать по одной цифре от 1 до 9\n"
+                                               "* Каждая строка судоку должна содержать по одной цифре от 1 до 9\n"
+                                               "* Каждый блок судоку 3 на 3 должен содержать по одной цифре от 1 до 9\n"
+                                               "* Поражение засчитывается в случае, если игрок допустил 3 ошибки\n"
+                                               "* Игрок побеждает, если всё поле судоку заполнено правильно\n"
+                                               "* Чтобы вернуться к выбору игр напишите выход\n"
+                                               "* Чтобы снова сыграть в города напишите play")
 
+    # начальная ветка, перезапуск бота
     if message.text == '/start':
         bot.send_message(message.from_user.id, "В какую игру ты хочешь поиграть, судоку или города?")
         bot.send_message(message.from_user.id, "Если судоку, то напиши судоку, если города - города.")
@@ -67,16 +76,15 @@ def choose_game(message):
 
 def cities_start() -> None:
     """Начало игры в города"""
-    global bot_says, flag_0
-    bot_says = ''
+    global last_char, flag_0
+    last_char = '1'
     flag_0 = True
 
 
 def cities_game(message):
     """Функция, основное тело игры"""
-    global bot_says, flag_0, cities_branch
+    global last_char, flag_0, cities_branch
 
-    cities_start()
     # то, что мы написали
     text = message.text.lower()
 
@@ -89,17 +97,13 @@ def cities_game(message):
     # выход из игры в города
     elif text == 'exit':
         cities_branch = False
-        bot.send_message(message.from_user.id, "Заглядывай поиграть со мной позже, буду ждать."
+        bot.send_message(message.from_user.id, "Заглядывай поиграть со мной позже, буду ждать.\n"
                                                "Напиши /start для перезапуска.")
         choose_game(message)
 
     elif text != 'города':
-        # переменная, хранящая значение функции о проверке города в начале игры
-        if bot_says == '':
-            verdict = cities_loop(text, '1', flag_0)
-        else:
-            last_char = last_char_search(bot_says)
-            verdict = cities_loop(text, last_char, flag_0)
+        # переменная, хранящая значение функции о проверке города в начале хода
+        verdict = cities_loop(text, last_char, flag_0)
 
         # Игра уже окончена
         if verdict == 'game over':
@@ -146,13 +150,14 @@ def cities_game(message):
                 bot.send_message(message.from_user.id, "Поздравляю, ты одолел меня! Я не смог вспомнить ни одного "
                                                        "подходящего слова. Если хочешь сыграть ещё раз, напиши play")
             else:
-                bot_says = new_city
-                bot.send_message(message.from_user.id, new_city)
+                last_char = last_char_search(new_city)
+                bot.send_message(message.from_user.id, new_city.capitalize())
 
 
-bot_says = ''
+last_char = '1'
 flag_0 = True
 cities_branch = False
 sudoku_branch = False
+
 # Запускаем работу бота
 bot.polling(none_stop=True, interval=0)
