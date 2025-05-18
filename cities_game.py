@@ -3,8 +3,7 @@ from cities_data import cities_dict
 
 def cities_loop(city: str, last_char: str, f: bool) -> str:
     """Функция, которая проверяет введённое слово на корректность и выходит из игры по её окончании"""
-    print(unnamed_cities)
-    print(cities_dict)
+
     # Проверка на то, закончилась ли игра
     if not f:
         return 'game over'
