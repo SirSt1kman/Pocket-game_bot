@@ -38,7 +38,8 @@ class Table:
         marks = [(i, j) for i in range(9) for j in range(9)]
 
         # Продолжаем просматривать клетки и удалять некоторые из них, пока не превысим заданное количество клеток
-        while i < amount:
+        # или пока все клетки не будут просмотрены
+        while i < amount and len(marks) > 0:
             # удаляем из непросмотренных меток просмотренную метку и оставляем элемент под этой меткой
             indexes = choice(marks)
             row_ind, col_ind = indexes[0], indexes[1]
@@ -119,8 +120,13 @@ class Table:
         for i in range(amount):
             eval(functions[randrange(0, len(functions), 1)])
 
+    def return_array_grid(self) -> list:
+        """Функция, возвращающая двумерный массив из клеток нерешенного судоку"""
+        return self.table
+
 
 sudoku = Table()
+sudoku_copy = Table()
 # sudoku.transposing()
 # sudoku.swap_rows_mini()
 # sudoku.swap_cols_mini()
@@ -128,4 +134,11 @@ sudoku = Table()
 # sudoku.swap_cols_maxi()
 sudoku.mixed_swapping(100)
 sudoku.delete_elements(30)
-sudoku.show()
+# sudoku.show()
+
+sudoku_unsolved = sudoku.return_array_grid()
+sudoku_copy.table = [line[:] for line in sudoku_unsolved]
+sudoku_solved = list(sudoku_solver.solve_sudoku(sudoku_copy.return_array_grid()))[0]
+
+# print(sudoku_unsolved)
+# print(sudoku_solved)
